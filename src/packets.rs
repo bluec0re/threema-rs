@@ -2,6 +2,11 @@ use crate::MessageID;
 use crate::ThreemaID;
 use flat_bytes::flat_enum;
 use flat_bytes::Flat;
+use serde::de::Deserializer;
+use serde::de::Error;
+use serde::de::Unexpected;
+use serde::de::Visitor;
+use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_slice, to_vec};
 
@@ -87,20 +92,82 @@ impl Flat for Text {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum RenderingType {
+    /// Display as default file message
+    File = 0,
+    /// Display as media file message (e.g. image or audio message)
+    Media = 1,
+    /// Display as sticker (images with transparency, rendered without bubble)
+    Sticker = 2,
+}
+
+impl Serialize for RenderingType {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_u8(*self as u8)
+    }
+}
+
+struct EnumVisitor;
+
+impl<'de> Visitor<'de> for EnumVisitor {
+    type Value = RenderingType;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        writeln!(formatter, "u8")
+    }
+
+    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        match v {
+            0 => Ok(RenderingType::File),
+            1 => Ok(RenderingType::Media),
+            2 => Ok(RenderingType::Sticker),
+            x => Err(Error::invalid_value(Unexpected::Unsigned(x), &self)),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for RenderingType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_u8(EnumVisitor)
+    }
+}
+
+impl Default for RenderingType {
+    fn default() -> Self {
+        RenderingType::File
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct File {
+    #[serde(rename = "b")]
+    blob_id: String,
     #[serde(rename = "n")]
     pub name: String,
     #[serde(rename = "m")]
     pub mime: String,
+    #[serde(rename = "t")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    thumbnail_blob_id: Option<String>,
     #[serde(rename = "p")]
-    pub preview_mime: String,
+    pub thumbnail_mime: String,
     #[serde(rename = "s")]
     pub size: u64,
     #[serde(rename = "d")]
     pub description: String,
+    #[serde(rename = "j")]
+    rendering_type: RenderingType,
+    #[serde(rename = "k")]
+    encryption_key: String,
     #[serde(flatten)]
-    pub unknown: std::collections::HashMap<String, serde_json::Value>,
+    unknown: std::collections::HashMap<String, serde_json::Value>,
 }
 
 impl Flat for File {
@@ -125,7 +192,7 @@ pub struct PollChoice {
     #[serde(rename = "r")]
     pub results: Vec<u32>,
     #[serde(flatten)]
-    pub unknown: std::collections::HashMap<String, serde_json::Value>,
+    unknown: std::collections::HashMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -137,7 +204,7 @@ pub struct PollDetails {
     #[serde(rename = "p")]
     pub participants: Vec<String>,
     #[serde(flatten)]
-    pub unknown: std::collections::HashMap<String, serde_json::Value>,
+    unknown: std::collections::HashMap<String, serde_json::Value>,
 }
 
 impl Flat for PollDetails {
