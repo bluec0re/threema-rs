@@ -29,43 +29,37 @@ fn tls_config() -> Arc<rustls::ClientConfig> {
     Arc::new(cfg)
 }
 
+fn agent() -> ureq::Agent {
+    ureq::AgentBuilder::new().tls_config(tls_config()).build()
+}
+
 pub(crate) fn send<T, R>(path: &str, body: &T) -> Result<R>
 where
     T: serde::Serialize,
     R: serde::de::DeserializeOwned,
 {
-    let tls_config = tls_config();
+    let agent = agent();
 
     let path = API.to_owned() + path;
-    let resp = ureq::post(&path)
+    let resp = agent
+        .post(&path)
         .set("user-agent", USER_AGENT)
         .set("accept", "application/json")
-        .set_tls_config(tls_config)
-        .send_json(serde_json::to_value(body)?);
-    if true {
-        let resp = resp.into_string()?;
-        Ok(serde_json::from_str(&resp)?)
-    } else {
-        Ok(resp.into_json_deserialize()?)
-    }
+        .send_json(serde_json::to_value(body)?)?;
+    Ok(resp.into_json()?)
 }
 
 pub(crate) fn request<R>(path: &str) -> Result<R>
 where
     R: serde::de::DeserializeOwned,
 {
-    let tls_config = tls_config();
+    let agent = agent();
 
     let path = API.to_owned() + path;
-    let resp = ureq::get(&path)
+    let resp = agent
+        .get(&path)
         .set("user-agent", USER_AGENT)
         .set("accept", "application/json")
-        .set_tls_config(tls_config)
-        .call();
-    if true {
-        let resp = resp.into_string()?;
-        Ok(serde_json::from_str(&resp)?)
-    } else {
-        Ok(resp.into_json_deserialize()?)
-    }
+        .call()?;
+    Ok(resp.into_json()?)
 }
