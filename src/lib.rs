@@ -1,6 +1,6 @@
 pub mod identity;
 pub mod packets;
-pub mod rest;
+mod rest;
 
 use std::collections::HashMap;
 use std::io::Read;
@@ -25,7 +25,7 @@ const SERVER_LONG_TERM_PUBKEY: [u8; 32] = [
     42, 140, 23, 81, 198, 97, 228, 192, 216, 201, 9,
 ];
 
-pub type PrivateKey = SecretKey;
+type PrivateKey = SecretKey;
 
 #[derive(Debug)]
 pub enum Error {
@@ -70,25 +70,25 @@ struct Nonce {
 }
 
 impl Nonce {
-    pub fn new(prefix: Vec<u8>) -> Self {
+    fn new(prefix: Vec<u8>) -> Self {
         Self { prefix, counter: 1 }
     }
 
-    pub fn prefix(&self) -> &[u8] {
+    fn prefix(&self) -> &[u8] {
         &self.prefix
     }
 
-    pub fn as_bytes(&self) -> Vec<u8> {
+    fn as_bytes(&self) -> Vec<u8> {
         let mut res = self.prefix.to_vec();
         res.extend_from_slice(&self.counter.to_le_bytes());
         res
     }
 
-    pub fn as_nonce(&self) -> Option<box_::Nonce> {
+    fn as_nonce(&self) -> Option<box_::Nonce> {
         box_::Nonce::from_slice(&self.as_bytes())
     }
 
-    pub fn inc(&mut self) {
+    fn inc(&mut self) {
         self.counter += 1;
     }
 }
@@ -297,7 +297,7 @@ impl Threema {
         Ok(())
     }
 
-    pub fn send(&mut self, data: &[u8]) -> Result<()> {
+    fn send(&mut self, data: &[u8]) -> Result<()> {
         let enc_packet = box_::seal(
             data,
             &self
@@ -344,7 +344,7 @@ impl Threema {
         nickname
     }
 
-    pub fn send_message(&mut self, receiver: ThreemaID, mut data: Vec<u8>) -> Result<MessageID> {
+    fn send_message(&mut self, receiver: ThreemaID, mut data: Vec<u8>) -> Result<MessageID> {
         let sender = self.id;
         let nickname = self.get_nickname();
         // workaround for https://github.com/rust-lang/rust/issues/21906
@@ -392,7 +392,7 @@ impl Threema {
         self.send_message(receiver, data)
     }
 
-    pub fn confirm_receipt(&mut self, receiver: ThreemaID, msg_id: MessageID) -> Result<MessageID> {
+    fn confirm_receipt(&mut self, receiver: ThreemaID, msg_id: MessageID) -> Result<MessageID> {
         let rcpt = Message::DeliveryReceipt(MessageStatus::Delivered, msg_id);
         debug!("Sending receipt {:#?}", rcpt);
         let data = rcpt.serialize();

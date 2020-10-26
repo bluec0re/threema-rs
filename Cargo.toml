@@ -1,6 +1,6 @@
 [package]
 name = "threema"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["bluec0re <coding@bluec0re.eu>"]
 edition = "2018"
 license = "Apache-2.0"
@@ -28,6 +28,9 @@ log = "0.4"
 
 [dev-dependencies]
 pretty_env_logger = "0.4"
+
+[build-dependencies]
+webpki = "0.21"
 
 [workspace]
 members = ["flat-bytes", "flat-bytes-derive", "threema-cli"]
