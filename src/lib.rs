@@ -19,7 +19,9 @@ use sodiumoxide::randombytes;
 
 use packets::*;
 
+// https://github.com/threema-ch/threema-android/blob/329b33d7bace99f5078ff08ef996a27c628be6e5/app/build.gradle#L91-L93
 const MSG_SERVER: &str = "g-33.0.threema.ch:5222";
+// https://github.com/threema-ch/threema-android/blob/329b33d7bace99f5078ff08ef996a27c628be6e5/app/build.gradle#L98
 const SERVER_LONG_TERM_PUBKEY: [u8; 32] = [
     69, 11, 151, 87, 53, 39, 159, 222, 203, 51, 19, 100, 143, 95, 198, 238, 159, 244, 54, 14, 169,
     42, 140, 23, 81, 198, 97, 228, 192, 216, 201, 9,
@@ -173,6 +175,9 @@ impl fmt::Debug for ThreemaID {
             .finish()
     }
 }
+
+#[derive(Copy, Clone, PartialEq, Eq, Flat)]
+pub struct GroupID([u8; 8]);
 
 pub struct Threema {
     id: ThreemaID,

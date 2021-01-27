@@ -2,11 +2,11 @@ use crate::MessageID;
 use crate::ThreemaID;
 use flat_bytes::flat_enum;
 use flat_bytes::Flat;
-use serde::de::Deserializer;
 use serde::de::Error;
 use serde::de::Unexpected;
 use serde::de::Visitor;
-use serde::ser::Serializer;
+use serde::Deserializer;
+use serde::Serializer;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_slice, to_vec};
 
@@ -14,41 +14,69 @@ flat_enum! {
     #[derive(Debug)]
     #[repr(u32)]
     pub enum Packet {
+        EchoRequest(u64) = 0,
+        EchoReply(u64) = 0x80,
         ClientToServer(Header) = 1,
+        ClientToServerAck = 0x81,
         ServerToClient(Header) = 2,
-        Echo(u64) = 0x80,
+        ServerToClientAck = 0x82,
         ServerAck(ThreemaID, MessageID),
         ClientAck(ThreemaID, MessageID),
         ConnectionEstablished = 0xd0,
+        // Error
         DublicateConnection = 0xe0,
+        Alert = 0xe1,
     }
 }
 
-type PollID = [u8; 8];
+pub type BallotID = [u8; 8];
+
 flat_enum! {
     #[derive(Debug)]
     #[repr(u8)]
     pub enum Message {
         Text(Text) = 1,
         Image,
-        Location = 16,
-        Video = 19,
-        Audio = 20,
-        Poll {
-            poll_id: PollID,
-            details: PollDetails,
-        },
-        PollUpdate {
+        Location = 0x10,
+        Video = 0x13,
+        Audio = 0x14,
+        // Poll {
+        BallotCreate {
+            poll_id: BallotID,
+            details: Ballot,
+        } = 0x15,
+        BallotVote {
+        // PollUpdate {
             sender: ThreemaID,
-            poll_id: PollID,
-            updats: PollUpdate,
-        } = 22,
-        File(File) = 23,
-        GroupText = 65,
-        GroupImage = 67,
-        GroupSetMembers = 74,
-        GroupSetName,
-        GroupMemberLeft,
+            poll_id: BallotID,
+            updates: BallotUpdates,
+        } = 0x16,
+        File(File) = 0x17,
+        ContactSetPhoto = 0x18,
+        ContactDeletePhoto = 0x19,
+        ContactRequestPhoto = 0x1a,
+        GroupText = 0x41,
+        GroupLocation = 0x42,
+        GroupImage = 0x43,
+        GroupVideo = 0x44,
+        GroupAudio = 0x45,
+        GroupFile = 0x46,
+        GroupCreate = 0x4a,
+        GroupRename = 0x4b,
+        GroupLeave = 0x4c,
+        GroupAddMember = 0x4d,
+        GroupRemoveMember = 0x4e,
+        GroupDestroy = 0x4f,
+        GroupSetPhoto = 0x50,
+        GroupRequestSync = 0x51,
+        GroupBallotCreate = 0x52,
+        GroupBallotVote = 0x53,
+        GroupDeletePhoto = 0x54,
+        VoipCallOffer = 0x60,
+        VoipCallAnswer = 0x61,
+        VoipIceCandiates = 0x62,
+        VoipCallHangup = 0x63,
+        VoipCallRinging = 0x64,
         DeliveryReceipt(MessageStatus, MessageID) = 0x80,
         TypingNotification = 0x90,
     }
@@ -167,7 +195,7 @@ pub struct File {
     #[serde(rename = "k")]
     encryption_key: String,
     #[serde(flatten)]
-    unknown: std::collections::HashMap<String, serde_json::Value>,
+    pub unknown: std::collections::HashMap<String, serde_json::Value>,
 }
 
 impl Flat for File {
@@ -192,22 +220,57 @@ pub struct PollChoice {
     #[serde(rename = "r")]
     pub results: Vec<u32>,
     #[serde(flatten)]
-    unknown: std::collections::HashMap<String, serde_json::Value>,
+    pub unknown: std::collections::HashMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct PollDetails {
+#[repr(u8)]
+pub enum BallotState {
+    Open = 0,
+    Closed = 1,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[repr(u8)]
+pub enum BallotType {
+    ResultOnClose = 0,
+    Intermediate = 1,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[repr(u8)]
+pub enum AssessmentType {
+    Single = 0,
+    Multiple = 1,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[repr(u8)]
+pub enum ChoiceType {
+    Text = 0,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Ballot {
     #[serde(rename = "d")]
     pub description: String,
     #[serde(rename = "c")]
     pub choices: Vec<PollChoice>,
     #[serde(rename = "p")]
     pub participants: Vec<String>,
+    #[serde(rename = "s")]
+    pub state: BallotState,
+    #[serde(rename = "a")]
+    pub assessment_type: AssessmentType,
+    #[serde(rename = "t")]
+    pub ballot_type: BallotType,
+    #[serde(rename = "o")]
+    pub choice_type: ChoiceType,
     #[serde(flatten)]
-    unknown: std::collections::HashMap<String, serde_json::Value>,
+    pub unknown: std::collections::HashMap<String, serde_json::Value>,
 }
 
-impl Flat for PollDetails {
+impl Flat for Ballot {
     fn serialize(&self) -> Vec<u8> {
         to_vec(self).unwrap()
     }
@@ -217,14 +280,17 @@ impl Flat for PollDetails {
         Some((res, data.len()))
     }
 }
+
+#[deprecated = "please use Ballot instead"]
+pub type PollDetails = Ballot;
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(transparent)]
-pub struct PollUpdate {
+pub struct BallotUpdates {
     updates: Vec<(u32, u32)>,
 }
 
-impl Flat for PollUpdate {
+impl Flat for BallotUpdates {
     fn serialize(&self) -> Vec<u8> {
         to_vec(self).unwrap()
     }
@@ -234,3 +300,6 @@ impl Flat for PollUpdate {
         Some((res, data.len()))
     }
 }
+
+#[deprecated = "please use BallotUpdates instead"]
+pub type PollUpdate = BallotUpdates;

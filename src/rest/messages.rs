@@ -59,34 +59,6 @@ impl From<Vec<u8>> for Bytes {
     }
 }
 
-#[derive(Default, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateRequest<'a> {
-    #[serde(with = "base64")]
-    pub public_key: &'a [u8],
-    pub device_id: &'a str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub response: Option<Bytes>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub token: Option<Bytes>,
-}
-
-#[derive(Default, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateResponse {
-    pub token: Option<Bytes>,
-    pub token_resp_key_pub: Option<Bytes>,
-    pub identity: Option<String>,
-    pub success: Option<bool>,
-    pub error: Option<String>,
-}
-
-impl<'a> Method<CreateResponse> for CreateRequest<'a> {
-    fn path(&self) -> &'static str {
-        "/identity/create"
-    }
-}
-
 #[derive(Default, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GetPubKeyResponse {

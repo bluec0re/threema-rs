@@ -5,8 +5,9 @@ use crate::Result;
 use std::sync::Arc;
 use webpki::TrustAnchor;
 
-const API: &str = "https://api.threema.ch";
-const USER_AGENT: &str = "Threema/2.8";
+// from https://github.com/threema-ch/threema-android/blob/997fd7baacf314bb0238cca4912bd4d3d28b6886/app/src/main/java/ch/threema/client/ProtocolStrings.java
+const API: &str = "https://apip.threema.ch";
+const USER_AGENT: &str = "Threema";
 
 include!(concat!(env!("OUT_DIR"), "/src/ca.rs"));
 
