@@ -537,6 +537,7 @@ dependencies = [
  "sodiumoxide",
  "ureq",
  "webpki",
+ "webpki-roots",
 ]
 
 [[package]]

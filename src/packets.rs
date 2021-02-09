@@ -17,11 +17,9 @@ flat_enum! {
         EchoRequest(u64) = 0,
         EchoReply(u64) = 0x80,
         ClientToServer(Header) = 1,
-        ClientToServerAck = 0x81,
         ServerToClient(Header) = 2,
-        ServerToClientAck = 0x82,
-        ServerAck(ThreemaID, MessageID),
-        ClientAck(ThreemaID, MessageID),
+        ServerAck(ThreemaID, MessageID) = 0x81,
+        ClientAck(ThreemaID, MessageID) = 0x82,
         ConnectionEstablished = 0xd0,
         // Error
         DublicateConnection = 0xe0,

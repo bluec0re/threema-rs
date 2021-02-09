@@ -26,6 +26,8 @@ impl From<ureq::Error> for Error {
 fn tls_config() -> Arc<rustls::ClientConfig> {
     let mut cfg = rustls::ClientConfig::new();
     cfg.root_store
+        .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
+    cfg.root_store
         .add_server_trust_anchors(&webpki::TLSServerTrustAnchors(&THREEMA_CA));
     Arc::new(cfg)
 }
