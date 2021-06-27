@@ -522,7 +522,7 @@ dependencies = [
 
 [[package]]
 name = "threema"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "base64",
  "flat-bytes",
@@ -542,7 +542,7 @@ dependencies = [
 
 [[package]]
 name = "threema-cli"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "clap",
  "log",
