@@ -1,9 +1,12 @@
+#![deny(clippy::pedantic)]
+
 pub use flat_bytes_derive::flat_enum;
 pub use flat_bytes_derive::Flat;
 
 pub trait Flat: Sized {
     fn serialize(&self) -> Vec<u8>;
     fn deserialize_with_size(data: &[u8]) -> Option<(Self, usize)>;
+    #[must_use]
     fn deserialize(data: &[u8]) -> Option<Self> {
         Self::deserialize_with_size(data).map(|(r, _)| r)
     }
@@ -39,7 +42,7 @@ impl_primitive!(i64);
 
 impl Flat for bool {
     fn serialize(&self) -> Vec<u8> {
-        Flat::serialize(&(if *self { 1u8 } else { 0u8 }))
+        Flat::serialize(&(u8::from(*self)))
     }
 
     fn deserialize_with_size(data: &[u8]) -> Option<(Self, usize)> {
@@ -52,7 +55,7 @@ macro_rules! impl_array {
         impl_array!(@as_expr [$($body)*])
     };
     (@step ($d: ident, $idx:expr, $t:ident, $($ts:ident,)*) -> ($($body:tt)*)) => {
-        impl_array!(@step ($d, $idx+1, $($ts,)*) -> ($($body)* $t::deserialize(&$d[::std::mem::size_of::<$t>()*($idx)..])?,));
+        impl_array!(@step ($d, $idx+1, $($ts,)*) -> ($($body)* $t::deserialize(&$d[::std::mem::size_of::<$t>()*($idx)..])?,))
     };
     (@as_expr $e:expr) => {$e};
     {$n:expr, $t:ident $($ts:ident)*}=> {
@@ -111,6 +114,8 @@ mod tests {
 
     #[test]
     fn serialize() {
+        #![allow(clippy::many_single_char_names)]
+
         let a = Foo::Bar;
         assert_eq!(a.serialize(), vec![1]);
         let b = Foo::Baz(true);

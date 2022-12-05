@@ -1,6 +1,8 @@
-use clap::App;
+#![deny(clippy::pedantic)]
+
 use clap::Arg;
-use clap::SubCommand;
+use clap::ArgAction;
+use clap::Command;
 use log::error;
 use log::info;
 use std::env;
@@ -80,48 +82,40 @@ fn setup_logging() {
 
 fn main() {
     setup_logging();
-    let matches = App::new("threema-cli")
-        .setting(clap::AppSettings::SubcommandRequiredElseHelp)
+    let matches = Command::new("threema-cli")
+        .subcommand_required(true)
         .arg(
-            Arg::with_name("identity")
-                .short("i")
+            Arg::new("identity")
+                .short('i')
                 .long("identity")
                 .value_name("FILE")
                 .default_value("identity")
-                .takes_value(true),
+                .action(ArgAction::Set),
         )
         .arg(
-            Arg::with_name("identity_password")
-                .short("p")
+            Arg::new("identity_password")
+                .short('p')
                 .long("password")
                 .value_name("PWD")
                 .default_value("testtest")
-                .takes_value(true),
+                .action(ArgAction::Set),
         )
         .subcommand(
-            SubCommand::with_name("send")
+            Command::new("send")
                 .arg(
-                    Arg::with_name("nick")
-                        .short("n")
+                    Arg::new("nick")
+                        .short('n')
                         .long("nick")
                         .value_name("NICK")
-                        .takes_value(true),
+                        .action(ArgAction::Set),
                 )
-                .arg(
-                    Arg::with_name("recipient")
-                        .value_name("RECIPIENT")
-                        .required(true),
-                )
-                .arg(
-                    Arg::with_name("message")
-                        .value_name("MESSAGE")
-                        .required(true),
-                ),
+                .arg(Arg::new("recipient").value_name("RECIPIENT").required(true))
+                .arg(Arg::new("message").value_name("MESSAGE").required(true)),
         )
-        .subcommand(SubCommand::with_name("receive"))
+        .subcommand(Command::new("receive"))
         .get_matches();
 
-    let ifile = matches.value_of("identity").unwrap();
+    let ifile = matches.get_one::<String>("identity").unwrap();
     info!("Loading identity from {}", ifile);
     let data = match fs::read_to_string(ifile) {
         Ok(d) => d,
@@ -131,14 +125,16 @@ fn main() {
         }
     };
 
-    let mut threema =
-        match Threema::from_backup(&data, matches.value_of("identity_password").unwrap()) {
-            Ok(t) => t,
-            Err(e) => {
-                error!("Couldn't initialize client: {:?}", e);
-                exit(1);
-            }
-        };
+    let mut threema = match Threema::from_backup(
+        &data,
+        matches.get_one::<String>("identity_password").unwrap(),
+    ) {
+        Ok(t) => t,
+        Err(e) => {
+            error!("Couldn't initialize client: {:?}", e);
+            exit(1);
+        }
+    };
     info!("Connecting to backend");
     if let Err(e) = threema.connect() {
         error!("Couldn't connect: {:?}", e);
@@ -146,19 +142,23 @@ fn main() {
     }
 
     match matches.subcommand() {
-        ("send", Some(matches)) => {
-            if let Some(n) = matches.value_of("nick") {
+        Some(("send", matches)) => {
+            if let Some(n) = matches.get_one::<String>("nick") {
                 threema.nick = Some(n.to_string());
             }
             send(
                 threema,
-                matches.value_of("recipient").unwrap(),
-                matches.value_of("message").unwrap().to_owned(),
-            )
+                matches.get_one::<String>("recipient").unwrap(),
+                matches.get_one::<String>("message").unwrap().clone(),
+            );
         }
-        ("receive", _) => receive(threema),
-        (other, _) => {
+        Some(("receive", _)) => receive(threema),
+        Some((other, _)) => {
             error!("Unexpected command {}", other);
+            exit(1)
+        }
+        None => {
+            error!("subcommand missing");
             exit(1)
         }
     }

@@ -11,17 +11,17 @@ description = "A threema.ch api library, based on o3ma"
 
 
 [dependencies]
-ureq = { version = "2.0.1", features = ["json"] }
+ureq = { version = "2.5", features = ["json"] }
 sodiumoxide = { version = "0.2", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 base64 = "0.13"
-rustls = { version = "0.19", features = ["dangerous_configuration"] }
-webpki = "0.21"
-webpki-roots = "0.21"
-pbkdf2 = { version = "0.8.0", default-features = false }
-hmac = "0.11.0"
-sha2 = "0.9"
+rustls = { version = "0.20", features = ["dangerous_configuration"] }
+webpki = "0.22"
+webpki-roots = "0.22"
+pbkdf2 = { version = "0.11", default-features = false }
+hmac = "0.12.1"
+sha2 = "0.10"
 flat-bytes = { version = "0.1", path = "./flat-bytes" }
 log = "0.4"
 
@@ -29,7 +29,7 @@ log = "0.4"
 pretty_env_logger = "0.4"
 
 [build-dependencies]
-webpki = "0.21"
+webpki = "0.22"
 
 [workspace]
 members = ["flat-bytes", "flat-bytes-derive", "threema-cli"]

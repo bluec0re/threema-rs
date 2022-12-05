@@ -1,3 +1,6 @@
+#![deny(clippy::pedantic)]
+#![allow(clippy::missing_panics_doc)]
+
 use proc_macro::TokenStream;
 use quote::format_ident;
 use quote::quote;
@@ -10,6 +13,8 @@ use syn::ItemStruct;
 
 #[proc_macro_derive(Flat)]
 pub fn derive_flat(input: TokenStream) -> TokenStream {
+    #![allow(clippy::similar_names)]
+
     let input = parse_macro_input!(input as ItemStruct);
 
     let ident = &input.ident;
@@ -292,8 +297,7 @@ pub fn flat_enum(input: TokenStream) -> TokenStream {
     let dtype = input
         .attrs
         .iter()
-        .map(|a| a.parse_meta())
-        .flatten()
+        .flat_map(syn::Attribute::parse_meta)
         .find_map(|m| {
             if !m.path().is_ident("repr") {
                 return None;

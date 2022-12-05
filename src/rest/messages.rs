@@ -1,5 +1,3 @@
-use crate::Result;
-use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 mod base64 {
@@ -25,19 +23,6 @@ mod base64 {
     }
 }
 
-pub trait Method<R>: Serialize
-where
-    R: DeserializeOwned,
-{
-    fn path(&self) -> &'static str;
-    fn call(self) -> Result<R>
-    where
-        Self: std::marker::Sized,
-    {
-        crate::rest::send(self.path(), &self)
-    }
-}
-
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Bytes(#[serde(with = "base64")] Vec<u8>);
 
@@ -47,9 +32,9 @@ impl AsRef<[u8]> for Bytes {
     }
 }
 
-impl Into<Vec<u8>> for Bytes {
-    fn into(self) -> Vec<u8> {
-        self.0
+impl From<Bytes> for Vec<u8> {
+    fn from(val: Bytes) -> Self {
+        val.0
     }
 }
 

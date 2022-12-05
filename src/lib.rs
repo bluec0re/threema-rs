@@ -1,3 +1,7 @@
+#![deny(clippy::pedantic)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_panics_doc)]
+
 pub mod identity;
 pub mod packets;
 mod rest;
@@ -17,7 +21,7 @@ use sodiumoxide::crypto::box_::PublicKey;
 use sodiumoxide::crypto::box_::SecretKey;
 use sodiumoxide::randombytes;
 
-use packets::*;
+use packets::{Header, Message, MessageStatus, Packet, Text};
 
 // https://github.com/threema-ch/threema-android/blob/329b33d7bace99f5078ff08ef996a27c628be6e5/app/build.gradle#L91-L93
 const MSG_SERVER: &str = "g-33.0.threema.ch:5222";
@@ -81,7 +85,7 @@ impl Nonce {
     }
 
     fn as_bytes(&self) -> Vec<u8> {
-        let mut res = self.prefix.to_vec();
+        let mut res = self.prefix.clone();
         res.extend_from_slice(&self.counter.to_le_bytes());
         res
     }
@@ -99,10 +103,12 @@ impl Nonce {
 pub struct MessageID([u8; 8]);
 
 impl MessageID {
+    #[must_use]
     pub fn from_bytes(data: [u8; 8]) -> Self {
         Self(data)
     }
 
+    #[must_use]
     pub fn from_slice(data: &[u8]) -> Option<Self> {
         if data.len() != 8 {
             return None;
@@ -115,8 +121,8 @@ impl MessageID {
 
 impl fmt::Display for MessageID {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for b in self.0.iter() {
-            write!(f, "{:02x}", b)?
+        for b in &self.0 {
+            write!(f, "{:02x}", b)?;
         }
         Ok(())
     }
@@ -157,7 +163,7 @@ impl ThreemaID {
         Self::from_slice(s.as_bytes())
     }
 
-    fn as_bytes(&self) -> [u8; 8] {
+    fn as_bytes(self) -> [u8; 8] {
         self.0
     }
 }
@@ -210,11 +216,11 @@ impl Threema {
 
     pub fn from_backup(data: &str, password: &str) -> Result<Self> {
         let (id, private_key) =
-            identity::decrypt_identity(data, password).ok_or(Error::InvalidBackupOrPassword)?;
+            identity::decrypt(data, password).ok_or(Error::InvalidBackupOrPassword)?;
         Self::new(ThreemaID::from_string(&id)?, &private_key)
     }
 
-    fn fetch_peer_key(peer: &ThreemaID) -> Result<PublicKey> {
+    fn fetch_peer_key(peer: ThreemaID) -> Result<PublicKey> {
         let resp: rest::messages::GetPubKeyResponse =
             rest::request(&format!("/identity/{}", peer)).unwrap();
         PublicKey::from_slice(resp.public_key.as_ref()).ok_or(Error::InvalidPublicKey)
@@ -315,6 +321,7 @@ impl Threema {
                 .as_ref()
                 .ok_or(Error::NotConnected)?,
         );
+        #[allow(clippy::cast_possible_truncation)]
         let len = enc_packet.len() as u16;
         self.conn
             .as_ref()
@@ -328,12 +335,12 @@ impl Threema {
         Ok(())
     }
 
-    fn get_peer_key<'a>(&'a mut self, peer: ThreemaID) -> Result<&'a PublicKey> {
-        use std::collections::hash_map::Entry::*;
+    fn get_peer_key(&mut self, peer: ThreemaID) -> Result<&PublicKey> {
+        use std::collections::hash_map::Entry::{Occupied, Vacant};
         let pk = match self.peers.entry(peer) {
             Occupied(entry) => entry.into_mut(),
             Vacant(entry) => {
-                let pk = Self::fetch_peer_key(&peer)?;
+                let pk = Self::fetch_peer_key(peer)?;
                 entry.insert(pk)
             }
         };
@@ -342,7 +349,10 @@ impl Threema {
 
     fn get_nickname(&self) -> [u8; 32] {
         let id_bytes = &self.id.as_bytes();
-        let nick = self.nick.as_ref().map(String::as_bytes).unwrap_or(id_bytes);
+        let nick = self
+            .nick
+            .as_ref()
+            .map_or(id_bytes.as_slice(), String::as_bytes);
         let mut nickname = [0u8; 32];
         let n = if nick.len() < 32 { nick.len() } else { 32 };
         nickname[..n].copy_from_slice(&nick[..n]);
@@ -357,12 +367,14 @@ impl Threema {
         let public_key = self.get_peer_key(receiver)?;
         let now = time::SystemTime::now();
         let now = now.duration_since(time::UNIX_EPOCH).unwrap_or_default();
+
+        #[allow(clippy::cast_possible_truncation)]
         let timestamp = now.as_secs() as u32;
         let mut header = Header {
             sender,
             receiver,
             nonce: Default::default(),
-            msg_id: Default::default(),
+            msg_id: MessageID::default(),
             nickname,
             timestamp,
             flags: 1,
@@ -370,6 +382,7 @@ impl Threema {
         randombytes::randombytes_into(&mut header.nonce);
         let msg_id = header.msg_id;
 
+        #[allow(clippy::cast_possible_truncation)]
         let pad = randombytes::randombytes_uniform(32) as u8;
         data.append(&mut vec![pad; pad as usize]);
 
@@ -454,15 +467,14 @@ impl Threema {
                     .map_err(|_| Error::DecryptionFailed)?;
                     let pad = *data.last().unwrap() as usize;
                     let data = &data[..data.len() - pad];
-                    let (msg, s) = Message::deserialize_with_size(&data)
+                    let (msg, s) = Message::deserialize_with_size(data)
                         .ok_or_else(|| Error::ParseError(format!("message: {:?}", data)))?;
                     if s < data.len() {
                         warn!("Unprocessed data: {:#x?}", &data[s..]);
                     }
 
                     match msg {
-                        Message::DeliveryReceipt(_, _) => {}
-                        Message::TypingNotification => {}
+                        Message::TypingNotification | Message::DeliveryReceipt(_, _) => {}
                         _ => {
                             self.confirm_receipt(sender, hdr.msg_id)?;
                         }

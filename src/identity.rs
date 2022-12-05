@@ -14,6 +14,7 @@ fn base32(input: &str) -> Option<Vec<u8>> {
             '1' => 'I',
             c => c.to_uppercase().next().unwrap(),
         };
+        #[allow(clippy::cast_possible_truncation)]
         let mut val = alphabet.find(c)? as u8;
         val <<= 3;
         byte |= val >> skip;
@@ -31,13 +32,14 @@ fn base32(input: &str) -> Option<Vec<u8>> {
     Some(out)
 }
 
-pub fn decrypt_identity(identity: &str, password: &str) -> Option<(String, Vec<u8>)> {
-    let identity = identity.replace("-", "");
+#[must_use]
+pub fn decrypt(identity: &str, password: &str) -> Option<(String, Vec<u8>)> {
+    let identity = identity.replace('-', "");
     let identity = base32(&identity)?;
     let (salt, identity) = identity.split_at(8);
 
     let mut key = [0u8; 32];
-    pbkdf2::<hmac::Hmac<sha2::Sha256>>(password.as_bytes(), salt, 100000, &mut key);
+    pbkdf2::<hmac::Hmac<sha2::Sha256>>(password.as_bytes(), salt, 100_000, &mut key);
 
     let plain = xsalsa20::stream_xor(
         identity,

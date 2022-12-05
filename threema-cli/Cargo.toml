@@ -14,5 +14,5 @@ description = "A threema.ch api client, based on o3ma"
 [dependencies]
 threema = { version = "0.1", path = ".." }
 pretty_env_logger = "0.4"
-clap = "2.33"
+clap = "4.0.29"
 log = "0.4"
