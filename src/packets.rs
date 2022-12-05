@@ -16,13 +16,16 @@ flat_enum! {
     pub enum Packet {
         EchoRequest(u64) = 0,
         EchoReply(u64) = 0x80,
-        ClientToServer(Header) = 1,
-        ServerToClient(Header) = 2,
-        ServerAck(ThreemaID, MessageID) = 0x81,
-        ClientAck(ThreemaID, MessageID) = 0x82,
-        ConnectionEstablished = 0xd0,
-        // Error
-        DublicateConnection = 0xe0,
+        OutgoingMessage(Header) = 1,
+        OutgoingMessageAck(ThreemaID, MessageID) = 0x81,
+        IncomingMessage(Header) = 2,
+        IncomingMessageAck(ThreemaID, MessageID) = 0x82,
+        PushNotificationToken = 0x20,
+        PushAllowedIdentities = 0x21,
+        VoipPushNotificationToken = 0x24,
+        QueueSendComplete = 0xd0,
+        LastEphemeralKeyHash = 0xd1,
+        Error = 0xe0,
         Alert = 0xe1,
     }
 }
@@ -77,6 +80,8 @@ flat_enum! {
         VoipCallRinging = 0x64,
         DeliveryReceipt(MessageStatus, MessageID) = 0x80,
         TypingNotification = 0x90,
+        FsEnvelope = 0xa0,
+        AuthToken = 0xff,
     }
 }
 

@@ -37,7 +37,7 @@ fn send(mut threema: Threema, recipient: &str, message: String) {
                 exit(1);
             }
         };
-        if let Packet::ServerAck(_, ack_mid) = packet {
+        if let Packet::OutgoingMessageAck(_, ack_mid) = packet {
             if ack_mid == mid {
                 info!("Message processed by server");
                 return;

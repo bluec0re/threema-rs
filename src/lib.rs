@@ -393,7 +393,7 @@ impl Threema {
             &priv_key,
         );
 
-        let pt = Packet::ClientToServer(header);
+        let pt = Packet::OutgoingMessage(header);
         debug!("Sending packet {:#?}", pt);
 
         let mut packet = pt.serialize();
@@ -418,7 +418,7 @@ impl Threema {
     }
 
     fn send_ack(&mut self, receiver: ThreemaID, msg_id: MessageID) -> Result<()> {
-        let ack = Packet::ClientAck(receiver, msg_id);
+        let ack = Packet::IncomingMessageAck(receiver, msg_id);
         debug!("Sending ack {:#?}", ack);
         let data = ack.serialize();
         self.send(&data)
@@ -452,7 +452,7 @@ impl Threema {
         loop {
             let (packet, payload) = self.receive_packet()?;
             match packet {
-                Packet::ServerToClient(hdr) => {
+                Packet::IncomingMessage(hdr) => {
                     let sender = hdr.sender;
                     self.send_ack(sender, hdr.msg_id)?;
                     // workaround for https://github.com/rust-lang/rust/issues/21906
@@ -486,10 +486,10 @@ impl Threema {
                         data: msg,
                     });
                 }
-                Packet::ConnectionEstablished => debug!("Connection established"),
-                Packet::ServerAck(_, mid) => debug!("Packet {} acked by server", mid),
+                Packet::QueueSendComplete => debug!("server completed sending its queue"),
+                Packet::OutgoingMessageAck(_, mid) => debug!("Packet {} acked by server", mid),
                 _ => {
-                    warn!("Unhandled packet: {:#?}", packet);
+                    warn!("Unhandled packet: {:#?} {:#?}", packet, payload);
                 }
             }
         }
