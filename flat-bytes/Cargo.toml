@@ -1,6 +1,6 @@
 [package]
 name = "flat-bytes"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["bluec0re <coding@bluec0re.eu>"]
 edition = "2018"
 license = "Apache-2.0"

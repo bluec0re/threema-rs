@@ -1,6 +1,6 @@
 [package]
 name = "threema"
-version = "0.1.4"
+version = "0.2.0"
 authors = ["bluec0re <coding@bluec0re.eu>"]
 edition = "2018"
 license = "Apache-2.0"
